@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics
+  namespace: semseg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics
+  template:
+    metadata:
+      labels:
+        app: analytics
+    spec:
+      containers:
+        - name: analytics
+          image: semantic-segmenter:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_URL
+              value: "redis://redis.semseg.svc.cluster.local:6379/0"
+            - name: REDIS_STREAM_PARTS_LABELED
+              value: "s_parts_labeled"
+            - name: REDIS_STREAM_ANALYTICS_DONE
+              value: "s_analytics_done"
+            - name: REDIS_GROUP_ANALYTICS
+              value: "g_analytics"
+            - name: REDIS_ONLY
+              value: "true"
+          command: ["bash", "-lc"]
+          args:
+            - >-
+              python3 /semantic-segmenter/services/analytics/analytics.py
+              --log-level info
+              --out-dir /segments
+          volumeMounts:
+            - name: seg
+              mountPath: /segments
+
+      volumes:
+        - name: seg
+          persistentVolumeClaim:
+            claimName: segments-pvc

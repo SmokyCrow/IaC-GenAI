@@ -1,0 +1,9 @@
+# Example terraform.tfvars file
+# Copy this file and customize for your environment
+
+namespace                = "semseg"
+image_repo               = "semantic-segmenter:latest"
+ingest_image             = "ingest-api:latest"
+node_port_base           = 30080
+pvc_storage_class_name   = "hostpath"
+# kubeconfig             = "/path/to/custom/kubeconfig"  # Optional

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: convert-ply
+  namespace: semseg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: convert-ply
+  template:
+    metadata:
+      labels:
+        app: convert-ply
+    spec:
+      containers:
+        - name: convert
+          image: semantic-segmenter:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_URL
+              value: "redis://redis.semseg.svc.cluster.local:6379/0"
+            - name: REDIS_STREAM_FRAMES_CONVERTED
+              value: "s_frames_converted"
+            - name: PREVIEW_OUT_DIR
+              value: "/segments"
+          # Invoke via python3 to avoid reliance on shebang (line ending issues on Windows checkouts)
+          command: ["python3","/semantic-segmenter/services/convert_service/convert-ply"]
+          args:
+            - --in-dir
+            - /sub-pc-frames
+            - --out-dir
+            - /pc-frames
+            - --preview-out-dir
+            - /segments
+            - --delete-source
+            - --log-level
+            - info
+          volumeMounts:
+            - name: sub
+              mountPath: /sub-pc-frames
+            - name: pc
+              mountPath: /pc-frames
+            - name: seg
+              mountPath: /segments
+          readinessProbe:
+            exec:
+              command: ["sh","-lc","test -d /pc-frames || true"]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: sub
+          persistentVolumeClaim:
+            claimName: sub-pc-frames-pvc
+        - name: pc
+          persistentVolumeClaim:
+            claimName: pc-frames-pvc
+        - name: seg
+          persistentVolumeClaim:
+            claimName: segments-pvc

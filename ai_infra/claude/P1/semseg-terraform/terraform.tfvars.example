@@ -1,0 +1,9 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and customize as needed
+
+# kubeconfig_path = "~/.kube/config"                 # Linux/Mac
+# kubeconfig_path = "%USERPROFILE%\\.kube\\config"  # Windows (use forward slashes in practice)
+
+shared_image  = "semseg/worker:latest"
+ingest_image  = "semseg/ingest-api:latest"
+redis_image   = "redis:7-alpine"

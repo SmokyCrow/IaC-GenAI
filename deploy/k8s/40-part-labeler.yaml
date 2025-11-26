@@ -1,0 +1,50 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: part-labeler
+  namespace: semseg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: part-labeler
+  template:
+    metadata:
+      labels:
+        app: part-labeler
+    spec:
+      containers:
+        - name: part-labeler
+          image: semantic-segmenter:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_URL
+              value: "redis://redis.semseg.svc.cluster.local:6379/0"
+            - name: REDIS_STREAM_PARTS_LABELED
+              value: "s_parts_labeled"
+            - name: REDIS_STREAM_FRAMES_CONVERTED
+              value: "s_frames_converted"
+            - name: REDIS_GROUP_PART_LABELER
+              value: "g_part_labeler"
+            - name: REDIS_ONLY
+              value: "true"
+          command: ["bash", "-lc"]
+          args:
+            - >-
+              python3 /semantic-segmenter/services/part_labeler/part_labeler.py
+              --log-level info
+              --out-dir /segments
+              --colorized-dir /segments/labels
+              --write-colorized
+          volumeMounts:
+            - name: pc
+              mountPath: /pc-frames
+            - name: seg
+              mountPath: /segments
+      volumes:
+        - name: pc
+          persistentVolumeClaim:
+            claimName: pc-frames-pvc
+        - name: seg
+          persistentVolumeClaim:
+            claimName: segments-pvc

@@ -1,0 +1,57 @@
+# Ignore VCS
+.git
+.gitignore
+
+# Terraform and state
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+terraform.tfstate*
+.terragrunt-cache/
+crash.log
+crash.*.log
+infra/terraform/.terraform/
+infra/terraform/**/*.tfstate*
+infra/terraform/**/.terraform/**
+
+# Large data/assets not needed for image
+full_frames/
+labels/
+in/
+refs/
+play-ply-frames
+clean-ply
+*.ply
+*.drc
+*.zip
+frames.zip
+
+# Local caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# OS/editor junk
+.DS_Store
+.vscode/
+.idea/
+
+# Docs and papers
+*.pdf
+*.md
+
+# Test, examples, and CI configs not required at runtime
+tests/
+**/examples/
+.github/
+
+# Kubernetes manifests are mounted externally; not needed in image
+deploy/
+
+# Misc
+.DS_Store
+.env
+.env.*

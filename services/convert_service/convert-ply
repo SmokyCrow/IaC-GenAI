@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+# Simple Draco -> PLY converter (single layer).
+# Watches an input directory for files named either '<layer>-<frame_id>.drc' or '<frame_id>.drc'
+# (we keep accepting the former because sample data still uses '0-00000.drc').
+# For each unseen frame id, decodes the first matching .drc into /pc-frames/<frame_id>.ply,
+# publishes a Redis stream event, and optionally deletes the .drc source.
+
+import os
+import re
+import sys
+import time
+import argparse
+import logging
+import subprocess
+from pathlib import Path
+
+# --- Redis helper import (explicit, fail loud) --------------------------------
+# When executed as a script by absolute path, Python places the script's parent
+# directory (convert_service) on sys.path, but not the project root. The
+# 'services' package lives one directory higher (project_root/services). Ensure
+# the project root is on sys.path so 'services.common.redis_bus' resolves.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # <repo-root>
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from services.common.redis_bus import get_client, xadd_safe  # type: ignore
+
+# Optional preview generator and PLY reader
+try:  # pragma: no cover
+    from services.common.preview import generate_preview  # type: ignore
+except Exception:
+    generate_preview = None  # type: ignore
+try:
+    from plyfile import PlyData  # type: ignore
+except Exception:
+    PlyData = None  # type: ignore
+try:
+    import numpy as np  # type: ignore
+except Exception:
+    np = None  # type: ignore
+
+FRAME_RE_LAYERED = re.compile(r"^(\d+)-([0-9]{5})\.drc$")
+FRAME_RE_PLAIN = re.compile(r"^([0-9]{5})\.drc$")
+
+
+def discover(input_dir: Path):
+    frames = {}
+    try:
+        for f in os.listdir(input_dir):
+            m = FRAME_RE_LAYERED.match(f)
+            if m:
+                layer = int(m.group(1))
+                fid = m.group(2)
+                # only take first layer (0) for conversion; ignore others
+                if layer != 0:
+                    continue
+                frames.setdefault(fid, f)
+                continue
+            m2 = FRAME_RE_PLAIN.match(f)
+            if m2:
+                fid = m2.group(1)
+                frames.setdefault(fid, f)
+    except FileNotFoundError:
+        pass
+    return frames  # fid -> filename
+
+
+def stable_file(path: Path, polls: int = 2, interval: float = 0.15) -> bool:
+    """Return True if file size is stable across 'polls' checks."""
+    last = -1
+    for _ in range(polls):
+        try:
+            size = path.stat().st_size
+        except FileNotFoundError:
+            return False
+        if size <= 0 or (last != -1 and size != last):
+            last = size
+            time.sleep(interval)
+            continue
+        last = size
+    return last > 0
+
+
+def decode(draco_path: Path, out_path: Path, binary: bool) -> None:
+    # draco_decoder auto-detects; use -o for PLY
+    cmd = ["draco_decoder", "-i", draco_path.as_posix(), "-o", out_path.as_posix()]
+    res = subprocess.run(cmd, capture_output=True)
+    if res.returncode != 0:
+        raise RuntimeError(f"draco_decoder failed ({res.returncode}): {res.stderr.decode(errors='ignore')}")
+    # Optionally convert ASCII->binary? Draco decoder already outputs binary PLY by default when extension .ply
+    if not out_path.exists():
+        raise RuntimeError("decoder reported success but output file missing")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--in-dir', default='/sub-pc-frames')
+    ap.add_argument('--out-dir', default='/pc-frames')
+    ap.add_argument('--log-level', choices=['debug','info'], default='info')
+    ap.add_argument('--delete-source', action='store_true')
+    ap.add_argument('--save-binary', action='store_true', help='(kept for CLI compatibility; draco_decoder already outputs PLY)')
+    ap.add_argument('--redis-url', default=os.environ.get('REDIS_URL',''), help='Redis URL (required)')
+    ap.add_argument('--redis-stream', default=os.environ.get('REDIS_STREAM_FRAMES_CONVERTED',''), help='Redis stream to publish frames (required)')
+    ap.add_argument('--sleep-ms', type=int, default=200)
+    ap.add_argument('--preview-out-dir', default=os.environ.get('PREVIEW_OUT_DIR','/segments'), help='Where to write preview-<id>.png (baseline preview)')
+    args = ap.parse_args()
+
+    logging.basicConfig(format='%(asctime)s %(levelname).1s %(message)s', level=getattr(logging, args.log_level.upper()))
+
+    in_dir = Path(args.in_dir)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    preview_dir = Path(args.preview_out_dir)
+    preview_dir.mkdir(parents=True, exist_ok=True)
+
+    # Enforce Redis availability; single-path flow requires Redis
+    if not args.redis_url or not args.redis_stream:
+        logging.error('convert-ply: Redis URL and stream are required'); sys.exit(1)
+
+    # Connect to Redis (fail-fast)
+    r = None
+    try:
+        r = get_client(args.redis_url)
+        if r is None:
+            raise RuntimeError('get_client returned None')
+        r.ping()  # verify
+        logging.info('convert-ply: connected to redis')
+    except Exception as e:
+        logging.error('convert-ply: unable to connect to redis: %s', e)
+        sys.exit(1)
+
+    processed = set()
+    logging.info('convert-ply: watching %s -> %s (stream=%s)', in_dir, out_dir, args.redis_stream or '-')
+    while True:
+        # Periodic status log every 5s
+        # Keep a lightweight heartbeat without tracking deferred/published
+        # (single-path; no backfill)
+        # Note: avoid excessive logs
+        # intentionally minimal status
+        #
+        frames = discover(in_dir)
+        for fid, fname in frames.items():
+            if fid in processed:
+                continue
+            src = in_dir / fname
+            out = out_dir / f"{fid}.ply"
+            if out.exists():
+                processed.add(fid)
+                continue
+            if not stable_file(src):
+                continue
+            try:
+                decode(src, out, binary=args.save_binary)
+                processed.add(fid)
+                logging.info('convert-ply: produced %s', out.name)
+                # Generate baseline preview if helper available (plyfile-based)
+                if generate_preview is not None and PlyData is not None and np is not None:
+                    try:
+                        pd = PlyData.read(out.as_posix())
+                        vx = pd["vertex"].data
+                        xs = np.asarray(vx["x"], dtype=np.float32)
+                        ys = np.asarray(vx["y"], dtype=np.float32)
+                        zs = np.asarray(vx["z"], dtype=np.float32)
+                        points = np.stack([xs, ys, zs], axis=1)
+                        if all(c in vx.dtype.names for c in ("red","green","blue")):
+                            colors = np.stack([np.asarray(vx["red"], dtype=np.uint8), np.asarray(vx["green"], dtype=np.uint8), np.asarray(vx["blue"], dtype=np.uint8)], axis=1)
+                        else:
+                            colors = np.full_like(points, 200, dtype=np.uint8)
+                        preview_path = preview_dir / f"preview-{fid}.png"
+                        ok = generate_preview(points, colors.astype(np.uint8), preview_path)
+                        if ok:
+                            logging.info('convert-ply: baseline preview %s', preview_path.name)
+                    except Exception as e:
+                        logging.warning('convert-ply: preview generation failed for %s: %s', fid, e)
+                try:
+                    logging.info('convert-ply: publishing frame %s', fid)
+                    xadd_safe(r, args.redis_stream, { 'frame_id': fid, 'ply_path': out.as_posix() })
+                except Exception as e:  # non-fatal but no backfill
+                    logging.warning('convert-ply: redis publish failed for %s: %s', fid, e)
+                if args.delete_source:
+                    try:
+                        os.remove(src)
+                    except FileNotFoundError:
+                        pass
+            except Exception as e:
+                logging.error('convert-ply: failed to decode %s: %s', fname, e)
+        time.sleep(args.sleep_ms / 1000)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)

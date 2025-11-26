@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingest-api
+  namespace: semseg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingest-api
+  template:
+    metadata:
+      labels:
+        app: ingest-api
+    spec:
+      containers:
+        - name: ingest
+          image: ingest-api:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: INGEST_OUT_DIR
+              value: "/sub-pc-frames"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+            - name: sub
+              mountPath: /sub-pc-frames
+      volumes:
+        - name: sub
+          persistentVolumeClaim:
+            claimName: sub-pc-frames-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingest-api
+  namespace: semseg
+spec:
+  selector:
+    app: ingest-api
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080

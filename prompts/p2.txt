@@ -1,0 +1,50 @@
+Generate Terraform for Docker Desktop with the following details and wiring:
+- Namespace: `semseg`
+- Deployments (8): `ingest-api` (8080), `results-api` (8081), `qa-web` (8082), `convert-ply`, `part-labeler`, `redactor`, `analytics`, `redis` (6379)
+
+Images:
+- Use a shared image for workers and web UIs (e.g., `semantic-segmenter:latest`) and a separate image for `ingest-api` (e.g., `ingest-api:latest`)
+- Use `redis:7-alpine` for Redis
+- Prefer parameterizing these as variables (e.g., `image_repo` or `shared_image` for workers/web; `ingest_image` for ingest)
+
+Services and ports:
+- NodePorts: `ingest-api` 30080 -> targetPort 8080; `results-api` 30081 -> 8081; `qa-web` 30082 -> 8082
+- `redis` as ClusterIP on port 6379
+
+PVCs and volumes:
+- Create three PVCs with `storageClassName=hostpath`, sizes: `sub-pc-frames-pvc` 64Mi, `pc-frames-pvc` 128Mi, `segments-pvc` 256Mi
+- Set `wait_until_bound=false` on PVC resources (to avoid deadlocks under WaitForFirstConsumer)
+- Mounts:
+   - `convert-ply`: `/sub-pc-frames`, `/pc-frames`, `/segments`
+   - `part-labeler`: `/pc-frames`, `/segments`
+   - `redactor`: `/pc-frames`, `/segments`
+   - `analytics`: `/segments`
+   - `results-api`: `/segments`
+   - `ingest-api`: `/sub-pc-frames`
+
+Environment variables:
+- Common: `REDIS_URL=redis://redis.semseg.svc.cluster.local:6379/0`
+- Streams/groups:
+   - `REDIS_STREAM_FRAMES_CONVERTED=s_frames_converted`
+   - `REDIS_STREAM_PARTS_LABELED=s_parts_labeled`
+   - `REDIS_STREAM_REDACTED_DONE=s_redacted_done`
+   - `REDIS_STREAM_ANALYTICS_DONE=s_analytics_done`
+   - `REDIS_GROUP_PART_LABELER=g_part_labeler`
+   - `REDIS_GROUP_REDACTOR=g_redactor`
+   - `REDIS_GROUP_ANALYTICS=g_analytics`
+- API specifics:
+   - `ingest-api`: `INGEST_OUT_DIR=/sub-pc-frames`
+   - `results-api`: `SEGMENTS_DIR=/segments`
+   - `qa-web`: `RESULTS_API_URL=http://results-api.semseg.svc.cluster.local`
+
+Probes and labels:
+- Readiness and liveness HTTP probes on `/healthz` for `ingest-api`, `results-api`, `qa-web`
+- All Pods and Services labeled `app=<name>`; Service selectors match labels
+
+Outputs:
+- Output three NodePort URLs for ingest, results, and qa.
+
+Project structure:
+- Introduce three simple reusable submodules: `deployment`, `service`, and `pvc`. Use these from the root module to reduce duplication.
+
+Follow Terraform best practices for structuring modules, variables, outputs, and provider version pinning. Deploy each Deployment with replicas=1; do not include autoscaling (HPA/VPA) or scaling policies. Do not include security hardening (RBAC, PodSecurityPolicy/SCC, NetworkPolicy, Pod/Container securityContext); focus only on the specified details. At the end, include example Terraform commands to run (fmt, init, validate, apply). For apply, include -var assignments for the variables your solution requires.

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redactor
+  namespace: semseg
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redactor
+  template:
+    metadata:
+      labels:
+        app: redactor
+    spec:
+      containers:
+        - name: redactor
+          image: semantic-segmenter:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: REDIS_URL
+              value: "redis://redis.semseg.svc.cluster.local:6379/0"
+            - name: REDIS_STREAM_PARTS_LABELED
+              value: "s_parts_labeled"
+            - name: REDIS_STREAM_REDACTED_DONE
+              value: "s_redacted_done"
+            - name: REDIS_GROUP_REDACTOR
+              value: "g_redactor"
+            - name: REDIS_ONLY
+              value: "true"
+          command: ["bash", "-lc"]
+          args:
+            - >-
+              python3 /semantic-segmenter/services/redactor/redactor.py
+              --log-level info
+              --out-dir /segments
+          volumeMounts:
+            - name: pc
+              mountPath: /pc-frames
+            - name: seg
+              mountPath: /segments
+
+      volumes:
+        - name: pc
+          persistentVolumeClaim:
+            claimName: pc-frames-pvc
+        - name: seg
+          persistentVolumeClaim:
+            claimName: segments-pvc

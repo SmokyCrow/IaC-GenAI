@@ -1,0 +1,96 @@
+Model: Sonnet 4.5 
+Prompt level: 1
+Candidate ID: sonnet4.5-P1
+
+Base-Prompt:
+```
+Create Terraform for Docker Desktop Kubernetes (single-node) to deploy the "Semantic Segmenter" app with:
+- Namespace: `semseg`
+- Deployments: ingest-api, results-api, qa-web, convert-ply, part-labeler, redactor, analytics, redis
+- Services: ingest-api, results-api, qa-web, redis
+
+Keep image names as variables and focus on generating the Kubernetes resources via Terraform. Use the default kubeconfig for Docker Desktop (on Windows: `%USERPROFILE%\.kube\config`), but you may accept an optional `kubeconfig` variable. You may assume reasonable service ports, exposure (NodePort vs ClusterIP), and storage details following best practices for Docker Desktop single-node clusters. Apply Terraform best practices for module structure and code quality (clear modules, variables, outputs, pinned providers). Use a shared image variable for workers and web UIs (`shared_image`), a separate image for `ingest-api` (`ingest_image`), and `redis:7-alpine` for Redis. Focus on a working, single-replica deployment; do not include autoscaling (HPA/VPA) or replica tuning. Do not include security hardening (RBAC, PodSecurityPolicy/SCC, NetworkPolicy, Pod/Container securityContext); focus only on the provided information.
+At the end, include example Terraform commands to run (fmt, init, validate, apply). For apply, include -var assignments for any variables your solution requires.
+```
+
+Scores (1..5):
+- Correctness (docker): 
+- Kubernetes fit: 
+- Storage: 
+- Image handling: 
+- Networking: 
+- Modularity: 
+- Observability: 
+- Reasoning: 
+
+Overall (avg or weighted): 
+
+Provided structure:
+semseg-terraform/
+├── 📄 Terraform Configuration Files (737 lines)
+│   ├── main.tf                    # Core Kubernetes resources (649 lines)
+│   ├── variables.tf               # Input variable definitions (23 lines)
+│   ├── outputs.tf                 # Output value definitions (55 lines)
+│   └── versions.tf                # Provider version constraints (10 lines)          
+	  
+Extra prompts needed:
+1:
+Error: Duplicate required providers configuration
+  on versions.tf line 4, in terraform:
+   4:   required_providers {
+A module may have only one required providers configuration. The required providers were previously configured at main.tf:4,3-21.
+Error: Duplicate required providers configuration
+  on versions.tf line 4, in terraform:
+   4:   required_providers {
+A module may have only one required providers configuration. The required providers were previously configured at main.tf:4,3-21.
+Please fix and show fixed code in chat.
+2:
+The shared image is semantic-segmenter:latest, the ingest-api image is ingest-api:latest. The env variables for different deployments:
+ingest-api: INGEST_OUT_DIR
+results-api: SEGMENTS_DIR, REDIS_URL, REDIS_STREAM_FRAMES_CONVERTED, REDIS_STREAM_PARTS_LABELED, REDIS_STREAM_REDACTED_DONE, REDIS_STREAM_ANALYTICS_DONE
+qa-web: RESULTS_API_URL
+convert: REDIS_URL, REDIS_STREAM_FRAMES_CONVERTED, PREVIEW_OUT_DIR
+labeler: REDIS_URL, REDIS_STREAM_PARTS_LABELED, REDIS_STREAM_FRAMES_CONVERTED, REDIS_GROUP_PART_LABELER
+redactor: REDIS_URL, REDIS_STREAM_PARTS_LABELED, REDIS_STREAM_REDACTED_DONE, REDIS_GROUP_REDACTOR
+analytics: REDIS_URL, REDIS_STREAM_PARTS_LABELED, REDIS_STREAM_ANALYTICS_DONE, REDIS_GROUP_ANALYTICS
+Please only respond with necessary fixes, and where they should be implemented.
+3:
+Please fix the env variables based on the information below:
+Streams: s_frames_converted, s_parts_labeled, s_redacted_done, s_analytics_done
+Groups: g_part_labeler, g_redactor, g_analytics
+/sub-pc-frames → PVC sub-pc-frames-pvc
+   - Producers/consumers: ingest-api (writes), convert-ply (reads)
+/pc-frames → PVC pc-frames-pvc
+   - Producers/consumers: convert-ply (writes), part-labeler (reads), redactor (reads)
+/segments → PVC segments-pvc
+   - Producers/consumers: convert-ply (writes previews), part-labeler (writes labels and colorized), redactor (writes), analytics (writes), results-api (reads)
+/segments/labels (subdirectory under /segments)
+   - Producer: part-labeler (colorized outputs)
+4:
+We also need to add args to some deployments, please do that based on the information provided below:
+results-api: uvicorn services.results_api.app:app --host 0.0.0.0 --port 8080 --workers 1
+qa-web: uvicorn services.qa_web.app:app --host 0.0.0.0 --port 3000 --workers 1
+convert: --in-dir /sub-pc-frames --out-dir /pc-frames --preview-out-dir /segments --delete-source --log-level info
+labeler: python3 /semantic-segmenter/services/part_labeler/part_labeler.py --log-level info --out-dir /segments --colorized-dir /segments/labels --write-colorized
+redactor: python3 /semantic-segmenter/services/redactor/redactor.py --log-level info --out-dir /segments
+analytics: python3 /semantic-segmenter/services/analytics/analytics.py --log-level info --out-dir /segments
+5:
+These args also require a command most of them python3 or bash, and some of them uvicorn or bash.
+6:
+Please fix convert-ply's command as it has to be a python3 call, similar what you can find in the other deployments args. Structure is /semantic-segmenter/services/convert_service/convert-ply
+7:
+Please change image_pull_policy to IfNotPresent because we have the images locally.
+
+Notes:
+- 1st extra prompt provided fast fix for the error.
+- 2nd extra prompt we got a refactored main.tf with not all of the env values good, but most of them were okey
+- 3rd extra prompt we got a fix for the wrong env values and also extended main.tf with pvc-s.
+- 4th extra prompt only really added the args without any commands, so 5th prompt was required to fix that and then 6th prompt to fix convert-ply.
+- Noticed /0 suffix missing from redis URLs causing some problems, I fixed this manually.
+- In gpt/P2 I did the image_pull_policy setting manually because it was nicely modularizes, but here it would be a longer task, that's why 7th prompt is introduced.
+- 7th prompt provided fix for the image pull error.
+- For the base prompt we didnt just get some implementation but the ai also generated documentation, test scripts, architecture markdown file, quickstart guide and so on. Because of this we had a lot of different artifacts in the claude chat and it was very confusing and hard to find the actual infrastructure code. Some of the files were also corrupted without any reason, or were just empty. So the ai focused more on the documentation and everything else than the actual implementation.
+
+
+Local test apply command:
+terraform apply

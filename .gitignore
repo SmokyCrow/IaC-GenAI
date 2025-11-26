@@ -1,0 +1,42 @@
+*~
+.vscode/
+labels/
+full_frames/
+frames.zip
+redacted_ply/
+out_ply/
+
+# Local SSH keys (keep out of git)
+ssh/
+*.pem
+
+# Terraform (exclude local state and caches)
+.terraform/
+**/.terraform/
+terraform.tfstate
+terraform.tfstate.*
+.terraform.lock.hcl
+.terragrunt-cache/
+crash.log
+crash.*.log
+# Often contains secrets; keep examples versioned
+*.tfvars
+!*.tfvars.example
+
+# Python caches
+__pycache__/
+*.py[cod]
+
+# Environment files
+.env
+.env.*
+
+# IDE/OS files
+.idea/
+.DS_Store
+
+# Handle common typo folder just in case
+.terraforn/
+
+# Paper generated HTML artifacts
+paper/htmls/

@@ -1,0 +1,7 @@
+Create Terraform for Docker Desktop Kubernetes (single-node) to deploy the "Semantic Segmenter" app with:
+- Namespace: `semseg`
+- Deployments: ingest-api, results-api, qa-web, convert-ply, part-labeler, redactor, analytics, redis
+- Services: ingest-api, results-api, qa-web, redis
+
+Keep image names as variables and focus on generating the Kubernetes resources via Terraform. Use the default kubeconfig for Docker Desktop (on Windows: `%USERPROFILE%\.kube\config`), but you may accept an optional `kubeconfig` variable. You may assume reasonable service ports, exposure (NodePort vs ClusterIP), and storage details following best practices for Docker Desktop single-node clusters. Apply Terraform best practices for module structure and code quality (clear modules, variables, outputs, pinned providers). Use a shared image variable for workers and web UIs (`shared_image`), a separate image for `ingest-api` (`ingest_image`), and `redis:7-alpine` for Redis. Focus on a working, single-replica deployment; do not include autoscaling (HPA/VPA) or replica tuning. Do not include security hardening (RBAC, PodSecurityPolicy/SCC, NetworkPolicy, Pod/Container securityContext); focus only on the provided information.
+At the end, include example Terraform commands to run (fmt, init, validate, apply). For apply, include -var assignments for any variables your solution requires.
