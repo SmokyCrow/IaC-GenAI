@@ -59,7 +59,7 @@ Follow Terraform best practices for structuring modules, variables, outputs, and
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 4 — Final state is runnable without further edits; required iterative fixes added commands/args for web/worker services and adjusted image_pull_policy to IfNotPresent.
+- Correctness (docker): 4 — Four extra prompts were required (per summary.txt); applies after 3–4 fixes under the revised rubric.
 - Kubernetes fit: 4 — Readiness/liveness probes on `/healthz` for ingest, results, and qa; labels/selectors consistent.
 - Storage: 5 — Three PVCs with `hostpath` storage class, right-sized 64Mi/128Mi/256Mi, `wait_until_bound=false`; mounts match expected paths.
 - Image handling: 5 — Shared vs ingest images parameterized; default pull policy IfNotPresent suitable for local Docker Desktop images.

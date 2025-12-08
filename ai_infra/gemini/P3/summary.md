@@ -76,15 +76,15 @@ Implementation quality:
 
 ## Scoring (with notes)
 Scores (1..5):
-- Correctness (docker): 4 — Two small, early fixes (dynamic block misuse; bash tokenization) then stable apply/run. Comparable to claude/P3 which also needed one early structural correction; end state meets prompt requirements fully.
-- Kubernetes fit: 4 — Proper labels, selectors, idiomatic Service port=80 + targetPort mapping, `/healthz` probes for the three web APIs. Minor improvement possible: unify probe timing parameters across deployments.
+- Correctness (docker): 5 — Two extra prompts were required (per summary.txt); applies after ≤2 fixes under the revised rubric.
+- Kubernetes fit: 5 — Commands use `bash -lc` with args and correct probes/selectors/labels, matching clarified criteria.
 - Storage: 5 — Three PVCs sized 64Mi/128Mi/256Mi, `hostpath` class via variable, `wait_until_bound=false`, mounts exactly match specified paths.
 - Image handling: 5 — Shared vs ingest images parameterized; Redis pinned to 7-alpine; default `IfNotPresent` pull policy on deployment module (public Redis can use Always safely). Meets all prompt requirements.
-- Networking: 5 — NodePorts consecutive from base; in-cluster URLs omit ports relying on Service abstraction; no mismatches or manual port suffixes.
+- Networking: 5 — NodePorts consecutive from base; in-cluster URLs omit ports relying on Service abstraction; confirmed to meet 5 per clarification.
 - Modularity: 5 — Reusable `deployment`, `service`, `pvc` modules plus an `app` composition module and structured outputs. Clear separation of variables/outputs.
 - Reasoning: 4 — Prompt-driven corrections were minimal and targeted; issues resolved without introducing regressions. Deduction of proper single-string bash usage shows solid adjustment.
 
-Overall (avg): 4.6 / 5
+Overall (avg): 4.9 / 5
 
 ## Evidence and highlights
 - versions.tf: pinned kubernetes provider `~> 2.31.0`.

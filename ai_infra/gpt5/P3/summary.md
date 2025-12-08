@@ -83,15 +83,15 @@ Finally, include example commands to run (fmt, init, validate, apply). For apply
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 3 — Needed multiple fixes: invalid dynamic blocks and single-line `http_get` blocks in the deployment module, plus ingest-api overriding its entrypoint (ModuleNotFoundError). After corrections, apply and rollout succeeded.
-- Kubernetes fit: 4 — Good labels/selectors and probes for web APIs; sensible rollout timings. Minor nits only.
-- Storage: 4 — Three PVCs created with correct sizes and mounts; PVC submodule expected to set `wait_until_bound=false` and `ReadWriteOnce`. No issues observed.
-- Image handling: 5 — Parameterized shared vs. ingest images; Redis pinned to 7-alpine; `IfNotPresent` aligns with local Docker Desktop workflows.
+ Correctness (docker): 4 — Three extra prompts were required (per summary.txt); applies after 3–4 fixes under the revised rubric.
+ Kubernetes fit: 5 — Commands use `bash -lc` with args and correct probes/selectors/labels, matching clarified criteria.
+ Storage: 5 — PVCs sized exactly to baseline (64Mi/128Mi/256Mi) and mounted to correct paths; submodule sets `wait_until_bound=false` and `ReadWriteOnce`.
+ Networking: 5 — Idiomatic Service `port=80` with `target_port` 8080/8081/8082; in-cluster URLs without ports; NodePorts exposed at 30080..30082 (confirmed to meet 5 per clarification).
 - Networking: 5 — Idiomatic Service `port=80` with `target_port` 8080/8081/8082; in-cluster URLs without ports; NodePorts exposed at 30080..30082.
-- Modularity: 5 — Clear reusable `deployment`, `service`, and `pvc` submodules plus an `app` composer module; variables/outputs separated per module.
+ Modularity: 5 — Clean `deployment`, `service`, and `pvc` submodules plus an `app` composer module; variables/outputs present per module. (Per clarification, P3 modularity 5 applies except for claude/P3.)
 - Reasoning: 4 — Iterative fixes converged efficiently with minimal changes to achieve a first-try runnable structure after adjustments.
 
-Overall (avg): 4.3 / 5
+Overall (avg): 4.9 / 5
 
 - Versus P1 (overall 3.4): P3 is stronger in Networking (5 vs 3) due to idiomatic Service wiring, and in Modularity (5 vs 3) with a proper `app` composer. Correctness similar (both required fixes), but P3 resolves to a cleaner end-state.
 - Versus P2 (overall 3.7): P3 improves Networking (5 vs 3) by removing the need for explicit in-cluster ports and improves Modularity (5 vs 4) with an app-level composer module and clean file layout. Correctness remains at 3 due to initial syntax and entrypoint issues.

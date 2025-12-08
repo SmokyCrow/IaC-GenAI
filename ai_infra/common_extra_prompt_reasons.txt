@@ -1,0 +1,74 @@
+Common Extra Prompts (Refined Criteria)
+=======================================
+Definition: "Common" means (a) occurred in at least two AIs AND (b) total occurrences ≥3 across all levels unless noted as a ubiquitous manual fix.
+
+Per-AI Extra Prompt Categories by Level
+---------------------------------------
+Claude:
+- P1: Provider block duplication; Env matrix & streams/groups; PVC addition; Args added; Commands added; Convert-ply python command; Image pull policy IfNotPresent; Redis DB suffix /0 manual fix.
+- P2: Args added; Commands added; Image pull policy; qa-web → results-api timeout URL fix.
+- P3: Dynamic block misuse for command/args.
+
+Gemini:
+- P1: Env matrix; Env+PVC mapping; Env/ports block vs argument misuse; Args added; Mount path attribute fix; Remove unnecessary storage_class_name variable; Image pull policy; Service ordering & dependency cycle (depends_on duplication); Redis DB suffix /0 manual fix.
+- P2: Missing kubeconfig path; Args added; Commands added; Volume definition syntax errors; Image pull policy; qa-web → results-api timeout URL fix.
+- P3: Dynamic blocks misuse (command/args); Bash args over-tokenization fix.
+
+GPT-5:
+- P1: Single-line variable block misuse; Env matrix; Env completion & PVC mapping; Service DNS corrections; Args added; Convert-ply python command; PVCs missing; Redis URL scheme + /0 fixes; Ingest-api NodePort exposure.
+- P2: Single-line variable block misuse; Missing module output attribute (claim_name); Args added; Single-line http_get probe blocks misuse; qa-web → results-api timeout URL fix; Image pull policy (manual).
+- P3: Dynamic blocks misuse (command/args); Single-line http_get probe blocks misuse; Ingest-api ModuleNotFoundError (entrypoint runtime semantics).
+
+Cross-AI Common Issues (>=2 AIs, ≥3 occurrences)
+-----------------------------------------------
+1. Env variable enumeration & stream/group completion: Claude P1 (2,3), Gemini P1 (1,2), GPT-5 P1 (2,3). (≥6 occurrences)
+2. Adding args to deployments: Claude P1(4) P2(1), Gemini P1(4) P2(3), GPT-5 P1(4) P2(3). (≥6)
+3. Adding / correcting commands (after args): Claude P1(5,6) P2(2), Gemini P2(4), GPT-5 P1(4,5) P2(3). (≥7)
+4. Dynamic block misuse for command/args: Claude P3(1), Gemini P3(1), GPT-5 P3(1). (3)
+5. Terraform block / argument syntax misuse (single-line blocks, wrong block vs arg): Gemini P1(3), GPT-5 P1(1), GPT-5 P2(1), GPT-5 P3(2) plus Gemini P2(5) volume definition errors. (≥6)
+6. Image pull policy change to IfNotPresent: Claude P1(7) P2(3), Gemini P1(6) P2(6), GPT-5 P2 (manual). (≥5)
+7. PVC creation / completeness: Claude P1(3), Gemini P1(2), GPT-5 P1(6). (3)
+8. qa-web results-api connectivity (timeout URL / port fix): Claude P2(4), Gemini P2(7), GPT-5 P2(5). (3)
+9. Redis DB suffix /0 missing (manual fixes): Claude P1 (notes), Gemini P1 (notes), GPT-5 P1 (notes). (3 manual)
+
+Frequently Appearing (near-ubiquitous) Manual / Minor Fixes
+----------------------------------------------------------
+- Redis URL correctness (scheme redis:// and /0 suffix): Explicit prompt (GPT-5 P1(7)); manual suffix additions across all AIs.
+- Service DNS formation (<service>.<namespace>.svc.cluster.local): Explicit in GPT-5 P1(4); implicitly stabilized in higher-level prompts for others.
+
+Less Common / Single-AI Issues (Not "Common" by criteria)
+---------------------------------------------------------
+- Provider block duplication (Claude P1 only).
+- Kubeconfig path omission (Gemini P2 only).
+- Dependency cycles / double depends_on (Gemini P1 only).
+- Module output attribute missing (GPT-5 P2 only).
+- Ingest-api ModuleNotFoundError runtime fix (GPT-5 P3 only).
+- Convert-ply python command (Claude P1, GPT-5 P1) – below ≥3 occurrence threshold.
+
+Occurrence Summary Table (Categories meeting threshold)
+------------------------------------------------------
+Category | AIs | Total Occurrences
+Env completion | 3 | ≥6
+Args addition | 3 | ≥6
+Commands correction | 3 | ≥7
+Dynamic block misuse | 3 | 3
+Syntax/block misuse | 2+ | ≥6
+Image pull policy | 3 | ≥5
+PVC completeness | 3 | 3
+qa-web connectivity | 3 | 3
+Redis /0 suffix | 3 | 3
+
+Prompt Level Effect
+-------------------
+- P1: Broad foundational gaps (env matrices, PVC existence, args/commands).
+- P2: Reduction in breadth; remaining syntactic correctness and connectivity issues.
+- P3: Narrowed to structural Terraform syntax (dynamic vs arg; probe blocks) and isolated runtime semantics.
+
+Design Implication for Future Base Prompts
+------------------------------------------
+Explicitly listing: per-deployment env matrix; Redis URL with scheme+DB suffix; full command+args pairs (indicating shell vs python invocation); PVC list with mount matrix; canonical Service DNS and desired exposure; correct Terraform argument vs block examples (container env, command/args, http_get probe) would likely remove ≥60–70% of P1/P2 extra prompts.
+
+Recommended Boilerplate Snippet (to cut early prompts)
+-----------------------------------------------------
+"Commands & Args pattern: use plain 'command' and 'args' arguments (lists) — do NOT use dynamic blocks. HTTP probes: use multi-line 'http_get { path = "..." port = <port> }' block with separate lines for each attribute. Redis env: REDIS_URL=redis://redis.<namespace>.svc.cluster.local:6379/0."
+

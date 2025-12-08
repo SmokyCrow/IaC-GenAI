@@ -172,9 +172,9 @@ terraform apply `
 
 Scores (1..5):
 
-- Correctness (docker): 3 — Primary issue was qa-web → results-api timeout from Service port semantics; adding an explicit port in the URL resolved it and the pipeline ran. Negative: rollout was initially blocked by the port mismatch and required a URL override instead of normalizing Service/targetPort in Terraform.
+- Correctness (docker): 3 — Five extra prompts were required (per summary.txt); applies after ≥5 fixes and can be tested under the revised rubric.
 - Kubernetes fit: 3 — Labels/selectors and probes on web APIs are in place; using NodePort numbers as in-cluster Service ports is non-idiomatic but workable with explicit ports. Negative: Services don’t follow the conventional port 80 + targetPort mapping, which reduces portability.
-- Storage: 4 — Three PVCs with correct sizes; `wait_until_bound=false` set to avoid deadlocks; mounts mapped appropriately.
+- Storage: 4 — Three PVCs present and correctly mounted; sizes are reasonable (≤2 Gi) and not unreasonably large (>5 GiB) per rubric; `wait_until_bound=false` used.
 - Image handling: 5 — Shared vs ingest images are parameterized, Redis pinned to 7-alpine, and image_pull_policy IfNotPresent matches local Docker Desktop workflows.
 - Networking: 3 — In-cluster DNS correct; current Service port wiring requires an explicit port in RESULTS_API_URL for qa-web, which is functional. Negative: env-level hardcoding of ports increases coupling and deviates from typical Service port abstractions.
 - Modularity: 4 — Good reuse via `deployment`, `service`, and `pvc` submodules with clear variables/locals. To reach 5, add a top-level “app” composer module that exports shared URLs/ports as outputs and centralizes wiring.

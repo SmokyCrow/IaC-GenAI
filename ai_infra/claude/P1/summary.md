@@ -15,16 +15,16 @@ At the end, include example Terraform commands to run (fmt, init, validate, appl
 
 ## Scoring (with notes)
 
-Scores (1..5):
-- Correctness (docker): 2 — Multiple issues required fixes: duplicate required_providers, missing `/0` in redis URLs, incomplete env wiring, and missing commands leading to broken entrypoints (fixed via several prompts). Apply becomes feasible only after several targeted edits.
-- Kubernetes fit: 2 — No readiness/liveness probes observed in APIs; non-idiomatic service/port choices (e.g., explicit in-cluster port in RESULTS_API_URL). Labels/selectors are present.
-- Storage: 2 — PVC sizes diverge from expected small test sizes (10Gi/50Gi/100Gi vs 64Mi/128Mi/256Mi), no `storageClassName` or `wait_until_bound=false`. Mount mappings generally correct.
-- Image handling: 5 — Uses `shared_image` and `ingest_image` variables; `image_pull_policy=IfNotPresent` throughout; Redis image parameterized. Fully aligned with local Docker Desktop image workflows.
-- Networking: 2 — Services use service port equal to container port (8080/3000) and NodePort 30000 for qa, diverging from expected 30080..30082 mapping and port=80 idiom; RESULTS_API_URL hardcodes port.
-- Modularity: 2 — Single large root file (649+ lines) with variables/outputs at root; no reusable submodules (`deployment`, `service`, `pvc`) or app composer module.
-- Reasoning: 3 — Iterative fixes addressed issues, but excessive non-infrastructure artifacts and initial miswiring slowed convergence.
+ Scores (1..5):
+ - Correctness (docker): 3 — Seven extra prompts were required (per summary.txt); applies after ≥5 fixes and can be tested under the revised rubric.
+ - Kubernetes fit: 2 — No readiness/liveness probes observed in APIs; non-idiomatic service/port choices (e.g., explicit in-cluster port in RESULTS_API_URL). Labels/selectors are present.
+ - Storage: 3 — All three PVCs are present and mounted; sizes are unreasonably large (10Gi/50Gi/100Gi) versus baseline small Mi sizes, matching rubric level 3.
+ - Image handling: 5 — Uses `shared_image` and `ingest_image` variables; `image_pull_policy=IfNotPresent` throughout; Redis image parameterized. Fully aligned with local Docker Desktop image workflows.
+ - Networking: 2 — Services use service port equal to container port (8080/3000) and NodePort 30000 for qa, diverging from expected 30080..30082 mapping and port=80 idiom; RESULTS_API_URL hardcodes port.
+ - Modularity: 2 — Single large root file (649+ lines) with variables/outputs at root; no reusable submodules (`deployment`, `service`, `pvc`) or app composer module.
+ - Reasoning: 5 — Extensive generated documentation and artifacts qualify for full reasoning per clarified rubric.
 
-Overall (avg): 2.6 / 5
+ Overall (avg): 3.1 / 5
 
 ## Evidence and highlights
 - Services: `ingest-api` service port 8080 (NodePort 30080), `results-api` service port 8080 (NodePort 30081), `qa-web` service port 3000 (NodePort 30000). In-cluster URL for `qa-web` points to `results-api` with `:8080` suffix.

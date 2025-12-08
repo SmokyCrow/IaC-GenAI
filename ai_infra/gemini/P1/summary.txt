@@ -90,7 +90,7 @@ Services need to be created before deployments, otherwise it is counterproductiv
 Error: Attribute redefined
   on main.tf line 334, in resource "kubernetes_deployment" "apps":
  334:   depends_on = [kubernetes_persistent_volume_claim.main]
-The argument "depends_on" was already set at main.tf:232,3-13. Each argument may be set only once.
+The argument "depends_on" was already set at main.tf:232,3-13. Each argument may be set only once. Please fix the error.
 9:
 Error: Cycle: kubernetes_deployment.apps, kubernetes_service.svcs
 Remove dependency from svcs.

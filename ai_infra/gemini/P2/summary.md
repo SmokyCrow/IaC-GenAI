@@ -59,7 +59,7 @@ Follow Terraform best practices for structuring modules, variables, outputs, and
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 3 — Required iterative fixes: added provider `config_path`, corrected module argument syntax, and resolved qa-web timeout by adding an explicit port to `RESULTS_API_URL`.
+- Correctness (docker): 3 — Seven extra prompts were required (per summary.txt); applies after ≥5 fixes and can be tested under the revised rubric.
 - Kubernetes fit: 3 — Labels/selectors consistent; HTTP liveness/readiness probes on `/healthz` present for `ingest-api`, `results-api`, and `qa-web` (verified in module usage). Non-idiomatic Service port usage (service port equals container port instead of `port=80` + `target_port`) led to requiring explicit `:8081` in an env URL.
 - Storage: 5 — PVC modules define three claims with sizes 64Mi/128Mi/256Mi, `storageClassName=hostpath`, `wait_until_bound=false` explicitly set, and mounts align with each workload’s required paths.
 - Image handling: 5 — Parameterized `shared_image`, `ingest_image`, and `redis_image`; deployment module defaults `image_pull_policy = IfNotPresent` matching local cluster caching; Redis pinned to `redis:7-alpine`.

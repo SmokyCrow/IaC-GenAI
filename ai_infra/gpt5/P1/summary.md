@@ -123,9 +123,9 @@ terraform apply -var="shared_image=semantic-segmenter:latest" -var="ingest_image
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 3 — Works on Docker Desktop after fixes (redis:// prefix, /0 suffix), but required multiple corrections during iteration.
+- Correctness (docker): 3 — Eight extra prompts were required (per summary.txt); applies after ≥5 fixes and can be tested under the revised rubric.
 - Kubernetes fit: 3 — Reasonable single-node k3s defaults; however, several services lack probes and some exposure choices are inconsistent with the stated rubric.
-- Storage: 4 — PVCs implemented and mapped to the described directories; approach is correct though a bit more complex than necessary.
+- Storage: 4 — All three PVCs present and correctly mapped; sizes are larger (1–2 Gi) but not "unreasonably large" per rubric (>5 GiB).
 - Image handling: 5 — Uses shared_image and ingest_image variables, Redis pinned to 7-alpine, and image_pull_policy IfNotPresent aligns with local Docker Desktop workflows.
 - Networking: 3 — In-cluster DNS fixed; ingest-api exposed as requested, but results-api exposure and NodePort conventions aren’t fully standardized.
 - Modularity: 3 — Separate reusable modules could have been created for repeated resources (e.g., deployments and PVCs).

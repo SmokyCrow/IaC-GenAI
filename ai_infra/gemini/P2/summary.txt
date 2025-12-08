@@ -92,7 +92,7 @@ Extra prompts needed:
 2:
 Please include ~/.kube/config in provider definition.
 3:
-We need to add args to some deployments, please do that based on the information provided below:
+We need to add arguments to some of the deployments, please do that based on the information provided below:
 results-api: uvicorn services.results_api.app:app --host 0.0.0.0 --port <port> --workers 1
 qa-web: uvicorn services.qa_web.app:app --host 0.0.0.0 --port <port> --workers 1
 convert: python3 /semantic-segmenter/services/convert_service/convert-ply --in-dir /sub-pc-frames --out-dir /pc-frames --preview-out-dir /segments --delete-source --log-level info

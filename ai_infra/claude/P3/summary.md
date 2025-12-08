@@ -79,13 +79,13 @@ Implementation quality:
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 4 — One early mistake using dynamic blocks for command/args was corrected; after that, `terraform apply` and rollout succeed without additional fixes.
-- Kubernetes fit: 5 — Labels/selectors consistent, `/healthz` liveness/readiness probes enabled for the three web APIs, sensible defaults for resources.
+- Correctness (docker): 5 — One extra prompt was required (per summary.txt); applies after ≤2 fixes per revised rubric.
+- Kubernetes fit: 5 — Commands use `bash -lc` with args and correct probes/selectors/labels, matching clarified criteria.
 - Storage: 5 — Three PVCs with `hostpath` class, sizes 64Mi/128Mi/256Mi, and `wait_until_bound=false`; mounts match the required paths.
 - Image handling: 5 — Parameterized shared vs ingest images; Redis pinned to 7-alpine; default `IfNotPresent` policy across modules suits local images.
-- Networking: 5 — Idiomatic Service `port=80` with `target_port` 8080/8081/8082; NodePorts on 30080/1/2; in-cluster URLs omit explicit ports.
-- Modularity: 5 — Clean `deployment`, `service`, and `pvc` submodules plus an `app` composer module; variables/outputs present per module.
-- Reasoning: 4 — Clear, minimal iteration to resolve a provider/schema nuance, otherwise adheres closely to the requested blueprint.
+- Networking: 5 — Idiomatic Service `port=80` with `target_port` 8080/8081/8082; NodePorts on 30080/1/2; in-cluster URLs omit explicit ports (confirmed to meet 5 per clarification).
+- Modularity: 4 — Submodules present; app module exists but root declares resources individually instead of invoking app once, per clarified rubric for score 5.
+- Reasoning: 4 — Clear, minimal iteration to resolve a provider/schema nuance; concise and accurate justification.
 
 Overall (avg): 4.7 / 5
 

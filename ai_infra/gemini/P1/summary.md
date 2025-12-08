@@ -16,15 +16,15 @@ At the end, include example Terraform commands to run (fmt, init, validate, appl
 ## Scoring (with notes)
 
 Scores (1..5):
-- Correctness (docker): 3 — Applies after several fixes. Initial schema/structure mistakes (e.g., `env` list vs block, `ports` vs `port`, duplicate `depends_on`) and a Redis DNS failure caused by Service/Deployment ordering. After removing the Service dependency and addressing schema issues, rollout proceeds.
+- Correctness (docker): 3 — Nine extra prompts were required (per summary.txt); applies after ≥5 fixes and can be tested under the revised rubric.
 - Kubernetes fit: 3 — Labels/selectors consistent; qa-web has HTTP probe, others used TCP/none. Some exposure/port conventions are inconsistent (mixed `port=80` and `port=8080`), and readiness endpoints aren’t standardized on `/healthz`.
-- Storage: 4 — PVCs for sub-pc-frames, pc-frames, segments, plus redis-data are present and mounted correctly. Did not set `wait_until_bound=false`, which is preferred on Docker Desktop.
+- Storage: 4 — All three PVCs present and correctly mounted; sizes are larger (2Gi) but not "unreasonably large" per rubric (>5 GiB).
 - Image handling: 5 — Uses `shared_image` and `ingest_image`; Redis pinned to `redis:7-alpine`; `image_pull_policy=IfNotPresent` matches local workflows.
 - Networking: 3 — In-cluster DNS wiring correct; qa-web maps Service `port=80` → container `3000`, but other Services use service port equal to container port (non-idiomatic). Initial dependency ordering created a cycle/race but was resolved.
-- Modularity: 3 — Single-root module with locals; no reusable `deployment`/`service`/`pvc` modules or app-level composer.
+- Modularity: 2 — No modularization (single monolithic root with variables/outputs only); lacks reusable `deployment`/`service`/`pvc` modules or an app composer.
 - Reasoning: 3 — Multiple prompt-driven iterations; some edits introduced unrelated regressions (double args, cycles) that needed manual cleanup.
 
-Overall (avg): 3.4 / 5
+Overall (avg): 3.3 / 5
 
 ## Evidence and highlights
 - Services: mixed conventions — `qa-web` Service `port=80` (targetPort 3000), others often `port=8080`; NodePorts exposed. Removing Service→Deployment dependency eliminated DNS failures during pod start.
